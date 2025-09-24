@@ -9,10 +9,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#050508] text-white">
       <Navbar />
-      <Hero />
-      <News />
-      <Services />
-      <Footer />
+      <main className="pt-16"> {/* offset for fixed navbar */}
+        <Hero />
+        <News />
+        <Services />
+        <Footer />
+      </main>
     </div>
   );
 }
