@@ -1,11 +1,19 @@
 // frontend/components/Hero.jsx
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation"; // Next 13 app/router; if pages-router use 'next/router'
 import { motion } from "framer-motion";
 import StarsBG from "./StarsBG";
 
 export default function Hero() {
+  const router = useRouter();
+
+  const goToDemo = (e) => {
+    e.preventDefault();
+    // programmatic navigation
+    router.push("/demo");
+  };
+
   const scrollToServices = () => {
     const el = document.getElementById("services");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -14,54 +22,58 @@ export default function Hero() {
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden px-6 pt-28 bg-[#050508]"
+      className="relative min-h-[75vh] md:min-h-screen flex items-center justify-center overflow-hidden px-6 pt-20 md:pt-28 bg-[#050508] scroll-mt-20"
     >
       {/* Stars background (z-0) */}
-      <StarsBG count={160} parallax={true} />
+      <StarsBG count={120} parallax={true} />
 
-      {/* subtle overlay between stars and content */}
-      <div className="pointer-events-none absolute inset-0 z-5 bg-gradient-to-b from-transparent via-black/30 to-black/60" />
+      {/* subtle overlay so stars don't steal contrast */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-transparent via-black/20 to-black/60" />
 
       {/* main content (z-10 ensures it sits above canvas & overlay) */}
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.9 }}
-        className="relative z-10 max-w-5xl text-center"
+        className="relative z-10 max-w-4xl text-center"
       >
-        <h1 className="text-4xl sm:text-6xl font-extrabold leading-tight">
-          CyberFluxAI{" "}
-          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#7e30e1] to-[#2bd4ff]">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
+          CyberFluxAI
+          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#7e30e1] to-[#2bd4ff] mt-2 sm:mt-3 text-lg sm:text-2xl md:text-3xl">
             GenAI for Explainable Incident Response
           </span>
         </h1>
 
         <motion.p
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="text-[#cfcfcf] mt-6 max-w-3xl mx-auto"
+          transition={{ delay: 0.12 }}
+          className="text-[#cfcfcf] mt-5 md:mt-6 text-sm sm:text-base md:text-lg mx-auto max-w-3xl"
         >
           Turn alerts into defensible actions. Ingest telemetry, reason with GenAI over
           policy and playbooks, execute guard-railed automation, and produce auditable
           evidence-backed reports — all while keeping humans in the loop.
         </motion.p>
 
-        <div className="mt-8 flex items-center justify-center gap-4">
-          <Link href="/demo">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#7e30e1] to-[#b364ff] text-white shadow-lg"
-            >
-              Try the Demo
-            </motion.button>
-          </Link>
+        <div className="mt-6 md:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+          {/* motion.button (no nested anchors) */}
+          <motion.button
+            type="button"
+            onClick={goToDemo}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full sm:w-auto text-center px-5 py-3 rounded-xl bg-gradient-to-r from-[#7e30e1] to-[#b364ff] text-white shadow-lg"
+            aria-label="Open demo"
+          >
+            Try the Demo
+          </motion.button>
 
           <motion.button
+            type="button"
             onClick={scrollToServices}
             whileHover={{ scale: 1.02 }}
-            className="px-6 py-3 rounded-xl border border-[#333] text-[#bfbfbf] bg-black/40"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-[#333] text-[#bfbfbf] bg-black/40"
+            aria-label="Explore capabilities"
           >
             Explore Capabilities
           </motion.button>
@@ -70,8 +82,8 @@ export default function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="mt-10 inline-grid grid-cols-3 gap-3 text-sm text-[#cfcfcf]"
+          transition={{ delay: 0.2 }}
+          className="mt-6 md:mt-10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-[#cfcfcf]"
         >
           <div className="glass p-3 rounded-lg shadow-sm">
             <div className="text-xs text-[#9fb0ff]">Ingest</div>

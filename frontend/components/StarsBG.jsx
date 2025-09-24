@@ -21,7 +21,6 @@ export default function StarsBG({ count = 160, parallax = true }) {
     let width = window.innerWidth;
     let height = window.innerHeight;
 
-    // Handle devicePixelRatio for crisp stars
     const setSize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
