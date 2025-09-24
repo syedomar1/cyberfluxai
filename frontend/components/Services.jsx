@@ -108,17 +108,17 @@ export default function Services() {
   );
 
   return (
-    <section id="services" className="py-20 px-6 bg-gradient-to-tr from-[#06060a] to-[#08080d]">
+    <section id="services" className="py-12 md:py-20 px-4 md:px-6 bg-gradient-to-tr from-[#06060a] to-[#08080d] scroll-mt-24">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-4xl font-bold">Core Capabilities</h2>
-            <p className="text-sm text-[#bdbdbd] mt-1 max-w-xl">
+            <h2 className="text-3xl md:text-4xl font-bold">Core Capabilities</h2>
+            <p className="text-sm md:text-base text-[#bdbdbd] mt-2 md:mt-1 max-w-xl">
               CyberFluxAI blends telemetry, generative reasoning, policy-as-code, and auditable automation to close the loop from detection to defensible action.
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 overflow-auto">
             {groups.map((g) => (
               <button
                 key={g}
@@ -126,7 +126,7 @@ export default function Services() {
                   setActiveGroup(g);
                   setSelected(null);
                 }}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition ${
+                className={`px-3 py-1 rounded-md text-sm font-medium transition whitespace-nowrap ${
                   activeGroup === g
                     ? "bg-gradient-to-r from-[#7e30e1] to-[#b364ff] text-black shadow-md"
                     : "text-[#bfbfbf] bg-transparent hover:bg-white/5"
@@ -139,7 +139,7 @@ export default function Services() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visible.map((cap) => {
             const Icon = cap.icon;
             const isOpen = selected === cap.id;
@@ -147,28 +147,27 @@ export default function Services() {
               <motion.article
                 key={cap.id}
                 layout
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ translateY: -6, boxShadow: "0 12px 30px rgba(99,52,255,0.12)" }}
                 onClick={() => setSelected(isOpen ? null : cap.id)}
-                className="cursor-pointer p-5 rounded-2xl glass border border-[#1e1e1f]"
+                className="cursor-pointer p-4 sm:p-6 rounded-2xl glass border border-[#1e1e1f] flex flex-col h-full"
                 role="button"
                 aria-expanded={isOpen}
               >
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-gradient-to-tr from-[#7e30e1]/12 to-[#b364ff]/8">
+                  <div className="p-3 rounded-xl bg-gradient-to-tr from-[#7e30e1]/12 to-[#b364ff]/8 shrink-0">
                     <Icon className="w-6 h-6 text-[#b364ff]" />
                   </div>
 
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg">{cap.title}</h3>
-                      <span className="text-xs px-2 py-1 rounded-md bg-[#111115] text-[#cfcfcf]">
+                      <h3 className="font-semibold text-lg truncate">{cap.title}</h3>
+                      <span className="text-xs px-2 py-1 rounded-md bg-[#111115] text-[#cfcfcf] ml-2">
                         {cap.short}
                       </span>
                     </div>
-                    <p className="text-sm text-[#bfbfbf] mt-2">{cap.blurb}</p>
-
+                    <p className="text-sm text-[#bfbfbf] mt-2 line-clamp-3">{cap.blurb}</p>
                     <div className="mt-4 flex items-center justify-between">
                       <div className="text-xs text-[#9fb0ff]">Learn more →</div>
                       <div className="text-xs text-[#9fbfbf]">Group: {cap.group}</div>
@@ -225,8 +224,8 @@ export default function Services() {
           })}
         </div>
 
-        <div className="mt-8 text-sm text-[#9fbfbf]">
-          Tip: click any capability to expand details and run a dry-run or request approval.
+        <div className="mt-6 text-sm text-[#9fbfbf]">
+          Tip: tap any capability to expand details and run a dry-run or request approval.
         </div>
       </div>
     </section>
