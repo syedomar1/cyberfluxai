@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+matplotlib
+seaborn
+fpdf==1.7.2
+python-multipart         # if using file uploads later
+python-dateutil
+openai
+scikit-learn
+Pillow  # optional but recommended for image sizing
+python-dotenv
