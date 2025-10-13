@@ -1,6 +1,8 @@
 # backend/main.py
 import os
 from dotenv import load_dotenv
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/.matplotlib")
+os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
