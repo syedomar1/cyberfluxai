@@ -160,13 +160,11 @@ export default function AnalyzerPage() {
   };
 
   // NEW: Download summary function.
-  // This calls a Next.js API proxy at /api/report/direct (see pages/api/report/direct.js below).
-  // The proxy will call your backend's /report/direct endpoint and return a PDF blob.
+  // This calls a Next.js API proxy at /api/report/direct.
   const downloadSummary = async ({ csv = "logs.csv", include_ai = true } = {}) => {
     setToast({ show: false, msg: "", type: "info" });
     setIsDownloading(true);
     try {
-      // call the proxy route (relative) to avoid CORS issues deployed on Vercel
       const apiUrl = `/api/report/direct?csv=${encodeURIComponent(csv)}&include_ai=${include_ai ? "true" : "false"}`;
       const resp = await fetch(apiUrl, {
         method: "GET",
@@ -178,13 +176,11 @@ export default function AnalyzerPage() {
       }
 
       const blob = await resp.blob();
-      // Determine filename from the response `Content-Disposition` if possible
       let filename = "cyberflux_report.pdf";
       const contentDisp = resp.headers.get("content-disposition") || "";
       const m = /filename="?([^"]+)"?/.exec(contentDisp);
       if (m && m[1]) filename = m[1];
 
-      // Create object URL and trigger download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -200,7 +196,6 @@ export default function AnalyzerPage() {
       setToast({ show: true, msg: String(err?.message || err || "Download failed"), type: "error" });
     } finally {
       setIsDownloading(false);
-      // auto-hide toast after a while
       setTimeout(() => setToast((t) => ({ ...t, show: false })), 4500);
     }
   };

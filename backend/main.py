@@ -15,7 +15,8 @@ app = FastAPI(title="CyberFluxAI Report API")
 origins = [
     "http://localhost:3000",            # local dev frontend
     "https://your-frontend.vercel.app", # Vercel frontend (set your actual URL)
-    "http://127.0.0.1:8001"           # optionally
+    "http://127.0.0.1:8001",            # optionally
+    "*"          
 ]
 # CORS (allow frontend during dev)
 app.add_middleware(
