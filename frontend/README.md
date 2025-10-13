@@ -24,6 +24,21 @@ The `pages/api` directory is mapped to `/api/*`. Files in this directory are tre
 
 This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment
+
+Create a `.env.local` file in `frontend/` with your Gemini API key for browser calls:
+
+```bash
+NEXT_PUBLIC_GEMINI_API_KEY=your_api_key_here
+```
+
+This key is exposed to the browser; use a scoped key with appropriate quota and restrictions.
+
+## Network Analyzer
+
+- Navigate to `/analyzer` to upload a CSV of network logs.
+- The page parses a sample client-side, generates a detailed analysis report via Gemini, and opens a chat for follow-up queries.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
