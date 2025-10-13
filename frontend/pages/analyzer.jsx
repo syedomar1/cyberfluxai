@@ -19,6 +19,10 @@ export default function AnalyzerPage() {
   const [report, setReport] = useState("");
   const [reportError, setReportError] = useState("");
 
+  // NEW: download state + toast
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [toast, setToast] = useState({ show: false, msg: "", type: "info" });
+
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState([]); // {role: 'user'|'model', text}
   const [isChatting, setIsChatting] = useState(false);
@@ -155,6 +159,53 @@ export default function AnalyzerPage() {
     }
   };
 
+  // NEW: Download summary function.
+  // This calls a Next.js API proxy at /api/report/direct (see pages/api/report/direct.js below).
+  // The proxy will call your backend's /report/direct endpoint and return a PDF blob.
+  const downloadSummary = async ({ csv = "logs.csv", include_ai = true } = {}) => {
+    setToast({ show: false, msg: "", type: "info" });
+    setIsDownloading(true);
+    try {
+      // call the proxy route (relative) to avoid CORS issues deployed on Vercel
+      const apiUrl = `/api/report/direct?csv=${encodeURIComponent(csv)}&include_ai=${include_ai ? "true" : "false"}`;
+      const resp = await fetch(apiUrl, {
+        method: "GET",
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => "");
+        throw new Error(`Failed to download report: ${resp.status} ${txt}`);
+      }
+
+      const blob = await resp.blob();
+      // Determine filename from the response `Content-Disposition` if possible
+      let filename = "cyberflux_report.pdf";
+      const contentDisp = resp.headers.get("content-disposition") || "";
+      const m = /filename="?([^"]+)"?/.exec(contentDisp);
+      if (m && m[1]) filename = m[1];
+
+      // Create object URL and trigger download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      setToast({ show: true, msg: "Summary downloaded.", type: "success" });
+    } catch (err) {
+      console.error("downloadSummary error:", err);
+      setToast({ show: true, msg: String(err?.message || err || "Download failed"), type: "error" });
+    } finally {
+      setIsDownloading(false);
+      // auto-hide toast after a while
+      setTimeout(() => setToast((t) => ({ ...t, show: false })), 4500);
+    }
+  };
+
+  // Build UI - preserve all existing markup & add button below the Generate button
   return (
     <section
       id="analyzer"
@@ -162,6 +213,23 @@ export default function AnalyzerPage() {
     >
       <StarsBG count={120} parallax={true} />
       <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-transparent via-black/20 to-black/60" />
+
+      {/* Spinner overlay when generating report or downloading */}
+      {(isGenerating || isDownloading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto bg-black/60 rounded-lg p-6 flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-t-transparent border-white rounded-full animate-spin" />
+            <div className="text-white text-sm">{isGenerating ? "Generating report..." : "Downloading summary..."}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Simple toast */}
+      {toast.show && (
+        <div className={`fixed z-60 bottom-6 right-6 px-4 py-2 rounded-lg text-sm ${toast.type === "error" ? "bg-red-600 text-white" : toast.type === "success" ? "bg-green-600 text-white" : "bg-gray-800 text-white"}`}>
+          {toast.msg}
+        </div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 18 }}
@@ -236,6 +304,18 @@ export default function AnalyzerPage() {
               {reportError ? (
                 <div className="mt-2 text-xs text-red-400">{reportError}</div>
               ) : null}
+
+              {/* NEW: Download Summary button */}
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => downloadSummary({ csv: "logs.csv", include_ai: true })}
+                  disabled={isDownloading}
+                  className="w-full mt-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#7e30e1] to-[#b364ff] text-white shadow disabled:opacity-50"
+                >
+                  {isDownloading ? "Downloading..." : "Download Summary"}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -308,5 +388,3 @@ export default function AnalyzerPage() {
     </section>
   );
 }
-
-
