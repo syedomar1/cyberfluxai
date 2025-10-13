@@ -4,13 +4,9 @@ FastAPI router to generate and download CyberFluxAI PDF reports.
 
 Endpoints:
  - GET /report/generate?csv_filename=logs.csv&nrows=500&include_ai=false
-     -> returns JSON metadata and download url
  - GET /report/download?path=<filename>
-     -> returns FileResponse for previously generated PDF (from tmp_reports)
  - GET /report/direct?csv=logs.csv&nrows=500&include_ai=false
-     -> returns the generated PDF file directly (one-shot)
  - GET /report/direct_debug?csv=logs.csv&include_ai=true
-     -> returns the PDF or detailed JSON with traceback (for development)
 """
 import os
 import traceback
@@ -20,8 +16,6 @@ from typing import Optional
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
-from reports.report_generator import generate_logs_report
-
 load_dotenv()
 router = APIRouter()
 
@@ -29,6 +23,23 @@ router = APIRouter()
 TMP_DIR = os.path.join(os.path.dirname(__file__), "..", "tmp_reports")
 TMP_DIR = os.path.abspath(TMP_DIR)
 os.makedirs(TMP_DIR, exist_ok=True)
+
+
+def _lazy_import_generate():
+    """
+    Lazily import the heavy report generator function.
+    Imported only when an endpoint actually needs to produce a report.
+    """
+    try:
+        # Import inside function to avoid heavy imports at module import time
+        from reports.report_generator import generate_logs_report
+        return generate_logs_report
+    except FileNotFoundError:
+        # re-raise file not found for clarity outside
+        raise
+    except Exception as e:
+        # raise a nicer error so endpoints can surface it
+        raise RuntimeError(f"Failed to import report generator: {e}")
 
 
 @router.get("/generate")
@@ -42,6 +53,7 @@ def generate_report(
     The generated PDF is stored in backend/tmp_reports.
     """
     try:
+        generate_logs_report = _lazy_import_generate()
         res = generate_logs_report(csv_filename=csv_filename, nrows=nrows, include_ai=include_ai)
         pdf_path = res.get("pdf_path")
         if not pdf_path or not os.path.isfile(pdf_path):
@@ -65,12 +77,9 @@ def generate_report(
         # clear message when CSV not found
         raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
-        # re-raise HTTPExceptions as-is
         raise
     except Exception as e:
-        # generic server error
         tb = traceback.format_exc()
-        # Optionally print or log tb for dev
         print("=== Exception in /report/generate ===")
         print(tb)
         raise HTTPException(status_code=500, detail=str(e))
@@ -119,6 +128,7 @@ def get_report_direct(
     Use this for quick single-call downloads.
     """
     try:
+        generate_logs_report = _lazy_import_generate()
         meta = generate_logs_report(csv_filename=csv, nrows=nrows, include_ai=include_ai)
         pdf_path = meta.get("pdf_path")
         if not pdf_path or not os.path.isfile(pdf_path):
@@ -146,16 +156,14 @@ def get_report_direct_debug(
     Use this to see the exact error without checking server console.
     """
     try:
+        generate_logs_report = _lazy_import_generate()
         meta = generate_logs_report(csv_filename=csv, nrows=nrows, include_ai=include_ai)
         return FileResponse(meta["pdf_path"], media_type="application/pdf", filename=os.path.basename(meta["pdf_path"]))
     except FileNotFoundError as e:
-        # For file-not-found errors, expose explicit message
         tb = traceback.format_exc()
         return JSONResponse({"error": str(e), "traceback": tb}, status_code=404)
     except Exception as e:
         tb = traceback.format_exc()
-        # print to console for developer
         print("=== Exception in /report/direct_debug ===")
         print(tb)
-        # Return both the message and the full traceback in the JSON for debugging
         return JSONResponse({"error": str(e), "traceback": tb}, status_code=500)
