@@ -10,11 +10,15 @@ from reports.report_generator import generate_logs_report
 
 load_dotenv()
 app = FastAPI(title="CyberFluxAI Report API")
-
+origins = [
+    "http://localhost:3000",            # local dev frontend
+    "https://your-frontend.vercel.app", # Vercel frontend (set your actual URL)
+    # "http://127.0.0.1:3000"           # optionally
+]
 # CORS (allow frontend during dev)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # in production, restrict to your frontend URL(s)
+    allow_origins=origins,  # in production, restrict to your frontend URL(s)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

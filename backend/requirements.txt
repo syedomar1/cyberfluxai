@@ -1,13 +1,23 @@
+# Core framework
 fastapi
 uvicorn[standard]
+gunicorn
+
+# Data analysis & visualization
 pandas
 numpy
 matplotlib
 seaborn
+
+# PDF & utilities
 fpdf==1.7.2
-python-multipart         # if using file uploads later
+python-multipart         # for file uploads
 python-dateutil
+python-dotenv
+
+# AI / ML / GenAI
 openai
 scikit-learn
-Pillow  # optional but recommended for image sizing
-python-dotenv
+
+# Imaging (optional but recommended)
+Pillow
