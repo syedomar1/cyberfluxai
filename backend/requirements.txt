@@ -21,3 +21,18 @@ scikit-learn
 
 # Imaging (optional but recommended)
 Pillow
+
+# Additional ML / RAG / Explainability
+sentence-transformers
+faiss-cpu
+shap
+xgboost
+joblib
+tqdm
+
+# Synthetic data / CTGAN (SDV)
+sdv
+ctgan
+
+# Optional: for better plotting in reports
+plotly

@@ -40,6 +40,10 @@ def health():
 def report_direct(
     csv_filename: str = Query("logs.csv", description="CSV file name inside backend/data/"),
     nrows: int | None = Query(None, ge=1, description="Optional: read only first n rows (dev)"),
+    use_detailed_faithfulness: bool = Query(True, description="Enable detailed faithfulness checks (may be slower)."),
+    use_rag: bool = Query(True, description="Enable RAG retrieval (requires sentence-transformers + faiss)."),
+    use_detector: bool = Query(True, description="Enable detector training + SHAP explanations (heavy)."),
+    rag_k: int = Query(8, description="Number of RAG rows to retrieve when RAG is enabled."),
 ):
     """
     Convenience endpoint for development:
@@ -48,7 +52,26 @@ def report_direct(
     NOTE: For production, use /report/generate (modular router).
     """
     try:
-        result = generate_logs_report(csv_filename=csv_filename, nrows=nrows)
+        # allow environment to force-enable features in production without changing code
+        env_use_detailed = os.getenv("ENABLE_DETAILED_FAITHFULNESS")
+        env_use_rag = os.getenv("ENABLE_RAG")
+        env_use_detector = os.getenv("ENABLE_DETECTOR")
+        if env_use_detailed is not None:
+            use_detailed_faithfulness = env_use_detailed.lower() in ("1", "true", "yes")
+        if env_use_rag is not None:
+            use_rag = env_use_rag.lower() in ("1", "true", "yes")
+        if env_use_detector is not None:
+            use_detector = env_use_detector.lower() in ("1", "true", "yes")
+
+        result = generate_logs_report(
+            csv_filename=csv_filename,
+            nrows=nrows,
+            include_ai=True,
+            use_detailed_faithfulness=use_detailed_faithfulness,
+            use_rag=use_rag,
+            use_detector=use_detector,
+            rag_k=rag_k,
+        )
         pdf_path = result.get("pdf_path")
         if not pdf_path or not os.path.isfile(pdf_path):
             raise HTTPException(status_code=500, detail="Report generation failed or file missing.")
