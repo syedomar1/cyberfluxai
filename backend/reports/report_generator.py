@@ -323,8 +323,12 @@ def generate_logs_report(
     csv_filename: str = "logs.csv",
     output_filename: Optional[str] = None,
     nrows: Optional[int] = None,
-    include_ai: bool = False,
-    layout: str = "single"   # default "single" = continuous & readable
+    include_ai: bool = True,
+    layout: str = "single",   # default "single" = continuous & readable
+    use_detailed_faithfulness: bool = True,
+    use_rag: bool = True,
+    use_detector: bool = True,
+    rag_k: int = 8,
 ) -> Dict[str, Any]:
     df = load_logs_csv(csv_filename, nrows=nrows)
     df.columns = [str(c).strip() for c in df.columns]
@@ -396,13 +400,36 @@ def generate_logs_report(
     # LLM / agent
     llm_output = {}
     agent_results = []
+    rag_index = None
+    rag_metadata = None
     if include_ai:
         try:
-            evidence = sample_evidence_rows(df, k=8)
+            # sample evidence for LLM context
+            evidence = sample_evidence_rows(df, k=500) if use_rag else sample_evidence_rows(df, k=8)
+
+            # Optionally build RAG index lazily (only if requested and deps present)
+            if use_rag:
+                try:
+                    from reports.rag import build_index
+                    rag_index, rag_metadata = build_index(evidence)
+                except Exception:
+                    rag_index, rag_metadata = None, None
+
+            # If we have an LLM helper, pass evidence (and optionally retrieved rows) to it
             if _HAS_LLM and hasattr(llm_helpers, "llm_generate_summary"):
-                llm_output = llm_helpers.llm_generate_summary(metrics, evidence) or {}
+                # if RAG is enabled and index exists, fetch top-k rows for a short query
+                extra_context = None
+                if rag_index is not None:
+                    try:
+                        from reports.rag import retrieve_rows
+                        extra_context = retrieve_rows("top suspicious evidence", rag_index, rag_metadata, k=rag_k)
+                    except Exception:
+                        extra_context = None
+                # combine retrieved rows into evidence before calling LLM helper
+                combined_evidence = list(extra_context) + list(evidence) if extra_context else evidence
+                llm_output = llm_helpers.llm_generate_summary(metrics, combined_evidence) or {}
             else:
-                top_attack_list = list(metrics.get("top_attack_types",{}).keys())[:3]
+                top_attack_list = list(metrics.get("top_attack_types", {} ).keys())[:3]
                 llm_output = {"summary": f"{total_records} rows, {metrics.get('unique_attack_types',0)} unique attack types. Top: {top_attack_list}", "recommendations":[{"text":"Inspect top source IPs for suspicious behavior","evidence_ids":[0]}]}
         except Exception as e:
             llm_output = {"summary_raw": f"LLM call error: {str(e)}"}
@@ -493,6 +520,29 @@ def generate_logs_report(
                 pdf.multi_cell(0, 6, safe_str(f"- {r.get('text','')} (evidence: {r.get('evidence_ids',[])})"))
             pdf.ln(4)
 
+        # Detailed faithfulness check (optional)
+        if use_detailed_faithfulness:
+            try:
+                from reports.faithfulness import compute_detailed_faithfulness
+                faith_report = compute_detailed_faithfulness(llm_output, df)
+                pdf.set_font("Arial", "B", 11)
+                pdf.cell(0, 6, safe_str("LLM Faithfulness Assessment"), ln=1)
+                pdf.set_font("Arial", size=10)
+                pdf.multi_cell(0, 6, safe_str(f"Trust score: {faith_report.get('trust_score')}. Unsupported claims: {len(faith_report.get('unsupported_claims', []))}"))
+                # List unsupported claims (brief)
+                unsup = faith_report.get('unsupported_claims', [])
+                if unsup:
+                    pdf.set_font("Arial", "B", 10)
+                    pdf.cell(0, 6, safe_str("Unsupported Claims (examples):"), ln=1)
+                    pdf.set_font("Courier", size=9)
+                    for c in unsup[:6]:
+                        pdf.multi_cell(0, 5, safe_str(str(c)))
+                    pdf.set_font("Arial", size=10)
+                pdf.ln(4)
+            except Exception:
+                # fail silently – faithfulness is optional
+                pass
+
     # Embed figures inline (one after another) - keeps them continuous
     for fig_basename in fig_paths:
         fig_file = os.path.join(TMP_DIR, fig_basename)
@@ -556,6 +606,48 @@ def generate_logs_report(
             for row in cm:
                 pdf.multi_cell(0, 6, safe_str(" | ".join(str(int(x)) for x in row)))
         pdf.ln(4)
+
+    # Optionally train detector and compute SHAP explanations (guarded and optional)
+    if use_detector:
+        try:
+            from reports.detector import train_detector, explain_top_predictions
+            # only run on small sampled dataset to avoid long runs in production; recommend pretraining offline
+            sample_df = df.sample(min(len(df), 10000), random_state=42) if len(df) > 10000 else df
+            if 'attackType' in sample_df.columns:
+                # create a binary label column expected by train_detector
+                sample_df['__label_bin'] = (sample_df['attackType'].astype(str).str.lower() != 'normal').astype(int)
+                det_res = train_detector(sample_df, target_col='__label_bin', model_type='xgb', out_path=None)
+                model = det_res.get('model')
+                # compute shap for top suspicious
+                try:
+                    X, feat_names = None, None
+                    # re-use detector._get_features heuristics by importing detector module
+                    from reports.detector import _get_features
+                    X, feat_names = _get_features(sample_df)
+                    explain = explain_top_predictions(model, X, top_k=8)
+                    # save a SHAP summary plot
+                    try:
+                        import shap
+                        import matplotlib.pyplot as plt
+                        shap.summary_plot(explain['shap_values'], X.iloc[explain['top_indices']], show=False)
+                        shap_path = os.path.join(TMP_DIR, 'shap_summary.png')
+                        plt.savefig(shap_path, bbox_inches='tight')
+                        plt.close()
+                        # embed into PDF
+                        pdf.add_page()
+                        pdf.set_font('Arial', 'B', 12)
+                        pdf.cell(0, 8, safe_str('Detector Explainability (SHAP)'), ln=1)
+                        try:
+                            pdf.image(shap_path, w=pdf.w - 24)
+                        except Exception:
+                            pdf.multi_cell(0, 6, safe_str('[SHAP figure could not be embedded]'))
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+        except Exception:
+            # optional feature – skip on failure
+            pass
 
     # Evidence
     evidence = sample_evidence_rows(df, k=8)
