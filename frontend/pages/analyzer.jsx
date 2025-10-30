@@ -27,7 +27,9 @@ export default function AnalyzerPage() {
   const [chatMessages, setChatMessages] = useState([]); // {role: 'user'|'model', text}
   const [isChatting, setIsChatting] = useState(false);
 
-  const API_KEY = "AIzaSyD54VXt73o8G8QQE38W7hn8pBdzuGEd87g";
+  // Read the Gemini API key from Next.js environment variables.
+  // In client-side code Next.js exposes env vars that start with NEXT_PUBLIC_ at build time.
+  const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
   const MODEL_ID = "gemini-2.5-flash"; // v1 stable model id
   async function listModels() {
     const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(API_KEY)}`;
